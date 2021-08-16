@@ -1,60 +1,122 @@
-
 <?php
 
-/**
- * Requires curl enabled in php.ini
- **/
+function getCurlData($url) {
+    
+    $configs = include('config.php');
+
+    global $coin;
+    global $currency;
+
+    $curl = curl_init();
+
+    $parameters = [
+        'symbol' => $coin,
+        'convert' => $currency
+    ];
+
+    $headers = [
+        'Accepts: application/json',
+        $configs[0]
+    ];
+
+    $qs = http_build_query($parameters);
+
+    $request = "{$url}?{$qs}";
+
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => $request,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_RETURNTRANSFER => 1
+    ));
+
+    $curl_data = curl_exec($curl);
+    $response_data = json_decode($curl_data, true);
+    return $response_data;
+        
+
+    curl_close($curl);
+}
+
+function printLine($msgs) {
+    foreach($msgs as $msg) {
+        echo $msg . PHP_EOL;
+    }
+} 
+
+function getCoinPrice() {
+    global $coin;
+    global $currency;
+    global $urlLatest;
+    return $price = number_format(getCurlData($urlLatest)["data"][$coin]["quote"][$currency]["price"], $decimals = 2, $decimal_separator = "," , $thousands_separator = ".");
+}
+
+function getCoinVolume() {
+   global $coin;
+   global $currency;
+   global $urlLatest;
+
+   return $volume = number_format(getCurlData($urlLatest)["data"][$coin]["quote"][$currency]["volume_24h"], $decimals = 2, $decimal_separator = "," , $thousands_separator = ".");
+}
+
+function displayCoinData() {
+    global $coin;
+    global $currency;
+
+    $coinPrice = getCoinPrice();
+    $coinVolume = getCoinVolume();
+
+    $line = '%s currently priced at %s %s.';
+    $line .= PHP_EOL;
+    $line .= 'Todays volume is %s %s';
+    echo sprintf($line, $coin, $coinPrice, $currency, $coinVolume, $currency);
+}
+
+if (!isset($argv[1]) || !isset($argv[2])) {
+    print "This script needs 2 paramaters to work";
+    return;
+}
+
+if (preg_match("/^[a-zA-Z]+$/", $argv[1]) === 0 &&  preg_match("/^[a-zA-Z]+$/", $argv[2]) === 0) {    
+    $lines = [
+        "You need to use 2 valid strings as paramaters.",
+        "The strings must not contain numbers.",
+        "The first paramater is the valid slug of the token you want to check.",
+        "And the second parameter is the slug of the currency in which you want the price to be displayed.",
+        "The currency can be a FIAT currency, it can also be another cryptocurrency",
+        "For example: \"php crypto.php btc eur\" or \"php crypto.php eth btc\""
+    ];
+    
+    printLine($lines);
+    
+    return;
+}
+
+$coin = strtoupper($argv[1]);
+$currency = strtoupper($argv[2]);
+$urlLatest = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest';
+
+if (getCurlData($urlLatest)["status"]["error_code"] !== 0) {
+    $lines = [
+        "You need to use 2 valid strings as paramaters.",
+        "The strings must not contain numbers.",
+        "The first paramater is the valid slug of the token you want to check.",
+        "And the second parameter is the slug of the currency in which you want the price to be displayed.",
+        "The currency can be a FIAT currency, it can also be another cryptocurrency",
+        "For example: \"php crypto.php btc eur\" or \"php crypto.php eth btc\""
+    ];
+    
+    printLine($lines);
+    
+    return;
+} 
+
+displayCoinData();
 
 
 
-$coin = strtoupper($argv[1]); // The first paramater is the coin you want to look up
-$currency = strtoupper($argv[2]); // The second paramater is the currency you want to check the coin against
 
 
 
 
-$url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest';
-$parameters = [
-
-  'symbol' => $coin,
-  'convert' => $currency
-];
-
-$headers = [
-  'Accepts: application/json',
-  'X-CMC_PRO_API_KEY: c1046118-7a21-4840-a5f6-4e70b10c8fa5'
-];
-$qs = http_build_query($parameters); // query string encode the parameters
-$request = "{$url}?{$qs}"; // create the request URL
-
-
-$curl = curl_init(); // Get cURL resource
-// Set cURL options
-curl_setopt_array($curl, array(
-  CURLOPT_URL => $request,            // set the request URL
-  CURLOPT_HTTPHEADER => $headers,     // set the headers 
-  CURLOPT_RETURNTRANSFER => 1         // ask for raw response instead of bool
-));
-
-
-
-
-$curl_data = curl_exec($curl); // Send the request, save the response
-$response_data = json_decode($curl_data, true); // Save response as array
-
-$volume = number_format($response_data["data"][$coin]["quote"][$currency]["volume_24h"], $decimals = 2); // Fetch and sanitize todays volume
-$price = number_format($response_data["data"][$coin]["quote"][$currency]["price"]); // Fetch and sanitize current price
-
-
-echo $coin . " is currently priced at " . $price . " " . $currency . "."; // Display coin price in selected currency
-echo "\nTodays volume is " . $volume . " " . $currency . ".";  // Display coin's daily volume in chosen currency
-
-
-
-
-
-
-curl_close($curl); // Close request
-?>
 
 
